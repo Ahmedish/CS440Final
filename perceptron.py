@@ -47,9 +47,8 @@ class PerceptronClassifier:
     # THE AUTOGRADER WILL LIKELY DEDUCT POINTS.
     acc = 0
     for iteration in range(self.max_iterations):
-        print "Executing iteration ", iteration + 1, "..."
+        print "Training iteration", iteration + 1
         for i in range(len(trainingData)):
-            "*** YOUR CODE HERE ***"
             target = None
             label = None
 
@@ -95,7 +94,7 @@ class PerceptronClassifier:
             if val[j] == validationLabels[j]:
                 superCount = superCount +1
         #print superCount
-        print "i:", iteration, " accuracy:", (100.0 * superCount / len1)
+        print "Accuracy:", (100.0 * superCount / len1), "%"
 
         #switch accordingly
         if superCount > acc:

@@ -180,8 +180,8 @@ def readCommand( argv ):
   parser.add_option('-a', '--autotune', help=default("Whether to automatically tune hyperparameters"), default=False, action="store_true")
   parser.add_option('-i', '--iterations', help=default("Maximum iterations to run training"), default=3, type="int")
   parser.add_option('-s', '--test', help=default("Amount of test data to use"), default=TEST_SET_SIZE, type="int")
-  parser.add_option('-n', '--analysis', help=default("Shows which data is wrongly predicted"), default=False, action="store_true")
-  parser.add_option('-r', '--random', help=default("Trains the data set using random data and calculates averages for percent accuracy and standard deviation"), default=False, action="store_true")
+  parser.add_option('-r', '--random', help=default("Trains the data set using random data"), default=False, action="store_true")
+  parser.add_option('-n', '--analysis', help=default("Displays any wrongly predicted data"), default=False, action="store_true")
 
   options, otherjunk = parser.parse_args(argv)
   if len(otherjunk) != 0: raise Exception('Command line input not understood: ' + str(otherjunk))
@@ -308,20 +308,21 @@ def runClassifier(args, options):
             rawTrainingData = samples.loadDataFile("digitdata/trainingimages", numTraining,DIGIT_DATUM_WIDTH,DIGIT_DATUM_HEIGHT)
             trainingLabels = samples.loadLabelsFile("digitdata/traininglabels", numTraining)
 
-
         print "Extracting features..."
+
         testData = map(featureFunction, rawTestData)
-        validationData = map(featureFunction, rawValidationData)
         trainingData = map(featureFunction, rawTrainingData)
+        validationData = map(featureFunction, rawValidationData)
 
         for percent in range(1,11):
-            accuracy = []
+            accArray = []
             times = []
             print("\n")
-            for runCount in range(0,5):
+
+            for rcount in range(0,5):
                 # Extract features
                 print("======================================\n")
-                print "("+str(runCount+1)+")" +  " Extracting random " + str((percent * 10)) + "% of the training data..."
+                print "("+str(rcount+1)+")" +  " Extracting random " + str((percent * 10)) + "% of the training data..."
                 numSubTraining = int((percent / 10.0) * totalTrainData)
                 indexes = random.sample(range(0, totalTrainData), numSubTraining)
                 subTrainingData = []
@@ -334,44 +335,45 @@ def runClassifier(args, options):
                 # Conduct training and testing
                 
                 start = time.time()
-                print "("+str(runCount + 1)+")", "Training on", numSubTraining, "data points..."
+                print "("+str(rcount + 1)+")", "Training on", numSubTraining, "data points..."
                 classifier.train(subTrainingData, subTrainingLabels, validationData, validationLabels)
                 end = time.time()
                 elapsed = end - start
-                print "("+str(runCount + 1)+")" + " Training completed in %0.4f second(s)" % elapsed
+                print "("+str(rcount + 1)+")" + " Training completed in %0.4f second(s)" % elapsed
                 times.append(elapsed)
                 
                 # Validation
-                print "("+str(runCount+1)+")", "Validating..."
+                print "("+str(rcount+1)+")", "Validating..."
                 guesses = classifier.classify(validationData)
                 correct = [guesses[i] == validationLabels[i] for i in range(len(validationLabels))].count(True)
-                print "("+str(runCount + 1)+") " + str(correct), ("correct out of " + str(len(validationLabels)) + " (%.1f%%).") % (100.0 * correct / len(validationLabels))
+                print "("+str(rcount + 1)+") " + str(correct), ("correct out of " + str(len(validationLabels)) + " (%.1f%%).") % (100.0 * correct / len(validationLabels))
                 
                 # Testing
-                print "("+str(runCount+1)+")", "Testing..."
+                print "("+str(rcount+1)+")", "Testing..."
                 guesses = classifier.classify(testData)
                 correct = [guesses[i] == testLabels[i] for i in range(len(testLabels))].count(True)
-                print "("+str(runCount + 1)+") " + str(correct), ("correct out of " + str(len(testLabels)) + " (%.1f%%).") % (100.0 * correct / len(testLabels)) + "\n"
-                accuracy.append(100.0 * correct / len(testLabels))
+                print "("+str(rcount + 1)+") " + str(correct), ("correct out of " + str(len(testLabels)) + " (%.1f%%).") % (100.0 * correct / len(testLabels)) + "\n"
+                accArray.append(100.0 * correct / len(testLabels))
 
-            avgAccuracy = 0
+            meanAcc = 0
             avgTime = 0
-            for q in range(0, len(accuracy)):
-                avgAccuracy += accuracy[q]
+
+            for q in range(0, len(accArray)):
+                meanAcc += accArray[q]
                 avgTime += times[q]
                 
-            avgAccuracy = avgAccuracy/len(accuracy)
+            meanAcc = meanAcc/len(accArray)
             avgTime = avgTime/len(times)
             
             print("=================\n")
             print "Average training time for", numSubTraining, "data points: %0.4f" % avgTime
-            print "Average accuracy of " + str(percent * 10) + ("% data training: "), str(avgAccuracy)
+            print "Average accuracy of " + str(percent * 10) + ("% data training: "), str(meanAcc)
             
             stdDev = 0
-            for a in accuracy:
-                temp = a - avgAccuracy
+            for a in accArray:
+                temp = a - meanAcc
                 stdDev += (temp*temp)
-            stdDev = stdDev / (len(accuracy) - 1)
+            stdDev = stdDev / (len(accArray) - 1)
             stdDev = math.sqrt(stdDev)
             print "Standard deviation of accuracy: %0.4f" % stdDev
             print
@@ -406,13 +408,16 @@ def runClassifier(args, options):
         # Conduct training and testing
         print "Training..."
         classifier.train(trainingData, trainingLabels, validationData, validationLabels)
+
         print "Validating..."
         guesses = classifier.classify(validationData)
         correct = [guesses[i] == validationLabels[i] for i in range(len(validationLabels))].count(True)
         print str(correct), ("correct out of " + str(len(validationLabels)) + " (%.1f%%).") % (100.0 * correct / len(validationLabels))
+
         print "Testing..."
         guesses = classifier.classify(testData)
         correct = [guesses[i] == testLabels[i] for i in range(len(testLabels))].count(True)
+
         print str(correct), ("correct out of " + str(len(testLabels)) + " (%.1f%%).") % (100.0 * correct / len(testLabels))
 
         analysis(classifier, guesses, testLabels, testData, rawTestData, printImage)
@@ -420,14 +425,14 @@ def runClassifier(args, options):
         # HighOddsFeatures
         if((options.odds) & (options.classifier == "naiveBayes" or (options.classifier == "nb")) ):
             label1, label2 = options.label1, options.label2
-            featOdds = classifier.findHighOddsFeatures(label1,label2)
+            features_odds = classifier.findHighOddsFeatures(label1,label2)
             if(options.classifier == "naiveBayes" or options.classifier == "nb"):
-                feats = "=== Features with highest odd ratio of label %d over label %d ===" % (label1, label2)
+                string3 = "=== Features with highest odd ratio of label %d over label %d ===" % (label1, label2)
             else:
-                feats = "=== Features for which weight (label %d) - weight (label %d) is largest ===" % (label1, label2)
+                string3 = "=== Features for which weight (label %d) - weight (label %d) is largest ===" % (label1, label2)
 
-            print feats
-            printImage(featOdds)
+            print string3
+            printImage(features_odds)
 
         if((options.weights) & (options.classifier == "perceptron")):
             for l in classifier.legalLabels:
@@ -437,6 +442,6 @@ def runClassifier(args, options):
 
 if __name__ == '__main__':
   # Read input
-  args, options = readCommand( sys.argv[1:] )
+  args, options = readCommand(sys.argv[1:])
   # Run classifier
   runClassifier(args, options)
