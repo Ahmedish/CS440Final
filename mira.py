@@ -75,8 +75,6 @@ class MiraClassifier:
         #iterates through the training data
         start = 0
         iteration = self.max_iterations
-        #print dataRange
-        #print dataLen
         for num in range(iteration):
             for data in range(len(trainingData)):
                 
@@ -92,12 +90,10 @@ class MiraClassifier:
                     for feat in datum.keys():
                         t += (self.weights[predicted_label][feat] - self.weights[label][feat]) * datum[feat]
                     #calculates the bottom half
-                    #print t
+
                     temp = (2 * sum([x ** 2 for x in datum.values()]))
                     t = t / temp
-                    #print t/calc
                     t = min(item, t)
-                    #print t
                     
                     hold = datum.copy()
                     for feat in datum.keys():
@@ -110,11 +106,9 @@ class MiraClassifier:
 
                 #Match found
                 else:
-                    #print "test"
                     continue
 
         p = self.classify(validationData)
-        #print p
 
         target = 0
         index = 0
@@ -122,7 +116,6 @@ class MiraClassifier:
         while index < len(p):
             #
             if p[index] == validationLabels[index]:
-                #print 'match'
                 target = target + 1
 
             #next index
@@ -131,7 +124,6 @@ class MiraClassifier:
         if guess < target:
             weights = self.weights.copy()
             guess = target
-            #print guess
 
     self.weights = weights
 
@@ -158,21 +150,14 @@ class MiraClassifier:
                      w_label1 - w_label2
 
     """
-    featuresOdds = []
-
+    features_odds = []
     f1 = self.features
 
     for f in f1:
-        featuresOdds.append((self.weights[label1][f] - self.weights[label2][f], f))
-
-    #print featuresOdds
-
-    #Not sorted
+        features_odds.append((self.weights[label1][f] - self.weights[label2][f], f))
 
     #sorts the features
-    featuresOdds = sorted(featuresOdds, key = lambda x: x[0], reverse = True)[:100]
-    #print featuresOdds
+    features_odds = sorted(featuresOdds, key = lambda x: x[0], reverse = True)[:100]
 
-    newFeature = list(map(lambda x: x[1], featuresOdds))
-    #print newFeature
-    return newFeature
+    newfeat = list(map(lambda x: x[1], features_odds))
+    return newfeat
