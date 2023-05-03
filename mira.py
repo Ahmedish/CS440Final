@@ -63,7 +63,7 @@ class MiraClassifier:
     #Used to keep track of our accuracy
     guess = -1
 
-    #Used to keep track of our weights in a list
+    #keep track of weights in a list
     weights = {}
 
     #iterates through Cgrid
@@ -72,13 +72,14 @@ class MiraClassifier:
         #initializes weights to zero for each run
         self.initializeWeightsToZero()
 
-        #iterates through the training data
+        #iterates through training data
         start = 0
-        iteration = self.max_iterations
-        for num in range(iteration):
+        iter = self.max_iterations
+
+        for n in range(iter):
             for data in range(len(trainingData)):
                 
-                #Not a instant match
+                #not instant match
                 if self.classify([trainingData[data]])[start] != trainingLabels[data]:
                     t = 1.0
                     datum = trainingData[data]
@@ -89,17 +90,16 @@ class MiraClassifier:
                     #only calculates top portion of the eqaution
                     for feat in datum.keys():
                         t += (self.weights[predicted_label][feat] - self.weights[label][feat]) * datum[feat]
+                    
                     #calculates the bottom half
-
-                    temp = (2 * sum([x ** 2 for x in datum.values()]))
-                    t = t / temp
+                    t = t / (2 * sum([x ** 2 for x in datum.values()])) 
                     t = min(item, t)
                     
                     hold = datum.copy()
                     for feat in datum.keys():
                         hold[feat] = hold[feat] * t
 
-                    # now we have to update all the weights
+                    #update all the weights
                     for feat in hold.keys():
                         self.weights[label][feat] += hold[feat]
                         self.weights[predicted_label][feat] -= hold[feat]
@@ -108,22 +108,19 @@ class MiraClassifier:
                 else:
                     continue
 
-        p = self.classify(validationData)
+        pred = self.classify(validationData)
 
-        target = 0
-        index = 0
-        #counts how many times we get a right prediction
-        while index < len(p):
-            #
-            if p[index] == validationLabels[index]:
-                target = target + 1
+        targ = 0
+        ind = 0
 
-            #next index
-            index = index + 1
-
-        if guess < target:
+        #counts correct predictions
+        while ind < len(pred):
+            if pred[ind] == validationLabels[ind]:
+                targ = targ + 1
+            ind = ind + 1
+        if guess < targ:
             weights = self.weights.copy()
-            guess = target
+            guess = targ
 
     self.weights = weights
 
@@ -152,12 +149,9 @@ class MiraClassifier:
     """
     features_odds = []
     f1 = self.features
-
     for f in f1:
         features_odds.append((self.weights[label1][f] - self.weights[label2][f], f))
-
     #sorts the features
     features_odds = sorted(featuresOdds, key = lambda x: x[0], reverse = True)[:100]
-
     newfeat = list(map(lambda x: x[1], features_odds))
     return newfeat
