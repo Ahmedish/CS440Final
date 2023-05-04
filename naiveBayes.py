@@ -61,84 +61,66 @@ class NaiveBayesClassifier(classificationMethod.ClassificationMethod):
     To get the list of all possible features or labels, use self.features and
     self.legalLabels.
     """
-
     count = util.Counter()
-    priorD = util.Counter()
-
+    pd = util.Counter()
     for label in trainingLabels:
         count[label] += 1
-        priorD[label] += 1
-
-
+        pd[label] += 1
     count = {}
-
-    for feat in self.features:
-
-        count[feat] = {}
-
+    for feature in self.features:
+        count[feature] = {}
         for label in self.legalLabels:
-            count[feat][label] = {
+            count[feature][label] = {
                 0: 0,
                 1: 0
             }
-
     for i in range(len(trainingData)):
-
         datum = trainingData[i]
         label = trainingLabels[i]
+        for (feature, val) in datum.items():
+            count[feature][label][val] += 1
+    pd.normalize()
+    self.priorD = pd
 
-        for (feat, val) in datum.items():
-            count[feat][label][val] += 1
-
-    #print "priorD normalize" + str(priorD.normalize())
-
-    priorD.normalize()
-    self.priorD = priorD
-
-
-    # Using Laplace smoothing to tune the data and find the best k value that gives the highest accuracy
     bestK = -1
     bestAcc = -1
     for k in kgrid:
-        tempProb = {}
-        for (feat, labels) in count.items():
-            tempProb[feat] = {}
+        temp_probs = {}
+        for (feature, labels) in count.items():
+            temp_probs[feature] = {}
             for (label, vals) in labels.items():
-                tempProb[feat][label] = {}
-                total = sum(count[feat][label].values())
+                temp_probs[feature][label] = {}
+                total = sum(count[feature][label].values())
                 total += 2*k
                 for (val, c) in vals.items():
                     #Normalizing the probability
-                    tempProb[feat][label][val] = (count[feat][label][val] + k) / total
+                    temp_probs[feature][label][val] = (count[feature][label][val] + k) / total
+        self.probs = temp_probs
+        pred = self.classify(validationData)
 
-        self.probs = tempProb
-
-        predictions = self.classify(validationData)
-
-        # Count number of correct predictions
+        #count correct predictions
         acc = 0
-        for i in range(len(predictions)):
-            if predictions[i] == validationLabels[i]:
+        for i in range(len(pred)):
+            if pred[i] == validationLabels[i]:
                 acc += 1
 
-        # Checking if any of the k values produced the best accuracy and if it did we store it
+        #checking k values for best accuracy and if found store it
         if acc > bestAcc:
             bestK = k
             bestAcc = acc
 
-    #Calculating the probabilities using the best k to get the most accurate results
-    tProb = {}
-    for (feat, labels) in count.items():
-        tProb[feat] = {}
-
+    #calculate the probabilities using best k to get most accurate results
+    t_probs = {}
+    for (feature, labels) in count.items():
+        t_probs[feature] = {}
         for (label, vals) in labels.items():
-            tProb[feat][label] = {}
-            total = sum(count[feat][label].values())
+            t_probs[feature][label] = {}
+            total = sum(count[feature][label].values())
             total += 2*bestK
             for (val, c) in vals.items():
-                tProb[feat][label][val] = (count[feat][label][val] + bestK) / total
+                t_probs[feature][label][val] = (count[feature][label][val] + bestK) / total
 
-    self.probs = tProb
+    self.probs = t_probs
 
 
   def classify(self, testData):
@@ -164,19 +146,13 @@ class NaiveBayesClassifier(classificationMethod.ClassificationMethod):
     To get the list of all possible features or labels, use self.features and
     self.legalLabels.
     """
-    logJoint = util.Counter()
-    #print self.priorD
-
+    lJoint = util.Counter()
     for label in self.legalLabels:
-        logJoint[label] = math.log(self.priorD[label])
-        #print str(logJoint[label])
-
+        lJoint[label] = math.log(self.priorD[label])
         for (feat, val) in datum.items():
-            #print "inside of datum for loop"
             p = self.probs[feat][label][val];
-            logJoint[label] += math.log(p)
-
-    return logJoint
+            lJoint[label] += math.log(p)
+    return lJoint
 
   def findHighOddsFeatures(self, label1, label2):
     """
@@ -185,16 +161,21 @@ class NaiveBayesClassifier(classificationMethod.ClassificationMethod):
 
     Note: you may find 'self.features' a useful way to loop through all possible features
     """
-    featuresOdds = []
-
-    "*** YOUR CODE HERE ***"
+    features_odds = []
 
     for feat in self.features:
         #Doing what is defined above in the comment P(feature=1 | label1)/P(feature=1 | label2)
-        featuresOdds.append((self.probs[feat][label1][1] / self.probs[feat][label2][1], feat))
+        features_odds.append((self.probs[feat][label1][1] / self.probs[feat][label2][1], feat))
 
     #First we sort the featuresOdds list and then reverse it to get the last 100 of the list
-    featuresOdds.sort()
-    fOdds = list(map(lambda x: x[1], featuresOdds[-100:]))
+    features_odds.sort()
+    fOddslist = list(map(lambda x: x[1], features_odds[-100:]))
+    return fOddslist
 
-    return fOdds
+
+
+
+
+
+
+
